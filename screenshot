@@ -1,0 +1,43 @@
+#!/bin/sh
+
+fotoDir="$HOME/pics/screenshots" # default ss dir
+foto="$(date +%Y%m%d"-"%H%M%S"-""$(($(date +%N | sed "s/^0*//g; s/\.0*/./g") / 1000000))").png" # timestamping
+
+out="$fotoDir/$foto"
+clipper='xclip -t "image/png" -selection clipboard'
+i=1
+until [ $i -gt $# ]; do
+	eval "arg="\$$i""
+	case $arg in
+		"-o")
+			i=$(($i + 1))
+			eval "out="\$$i""
+			;;
+		"crop")
+			if ! select="$(hacksaw -f "-i %i -g %g")"; then exit; fi
+			;;
+		"temp")
+			mkdir -p "/tmp/$USER/screenshot"
+			out="/tmp/$USER/screenshot/$foto"
+			temp=true
+			;;
+		"file") # don't save to clipboard
+			file=true
+			;;
+		"edit")
+			recentPic="$(find "/tmp/$USER/screenshot" "$fotoDir" -maxdepth 1 -type f -printf '%T+\t%p\n' | sort -nr | cut -f2 | xargs file --mime-type  2>/dev/null | grep -F 'image/' | cut -d ':' -f 1 | head -n1)"
+			[ $temp ] && newDir="$(dirname "$recentPic")" || newDir="$fotoDir"
+			[ -f "$newDir/$(basename $recentPic)" ] && newPic="$newDir/$(echo "$(basename $recentPic)" | sed 's/\(.*\)\..*/\1/')-c.$(echo "$recentPic" | sed 's/.*\.//')" ||
+				newPic="$newDir/$(basename $recentPic)"
+			basicrop "$recentPic" "$newPic" # could be replaced with a different editor
+			### change below
+			! [ -f "$newPic" ] && newPic="$recentPic" && overwritten=true
+			[ $file ] || xclip -t "image/png" -sel c "$newPic"
+			! [ $overwritten ] && [ $temp ] && rm "$newPic"
+			exit
+			;;
+	esac
+	i=$(($i + 1))
+done
+shotgun -f png $select "$out"
+[ $file ] || xclip -t "image/png" -sel c "$out"
