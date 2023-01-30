@@ -14,7 +14,7 @@ until [ $i -gt $# ]; do
 			eval "out="\$$i""
 			;;
 		"crop")
-			if ! select="$(hacksaw -f "-i %i -g %g")"; then exit; fi
+			if ! select="$(hacksaw -f "-i %i -g %g")"; then exit 1; fi
 			;;
 		"temp")
 			mkdir -p "/tmp/$USER/screenshot"
@@ -27,17 +27,18 @@ until [ $i -gt $# ]; do
 		"edit")
 			recentPic="$(find "/tmp/$USER/screenshot" "$fotoDir" -maxdepth 1 -type f -printf '%T+\t%p\n' | sort -nr | cut -f2 | xargs file --mime-type  2>/dev/null | grep -F 'image/' | cut -d ':' -f 1 | head -n1)"
 			[ $temp ] && newDir="$(dirname "$recentPic")" || newDir="$fotoDir"
-			[ -f "$newDir/$(basename $recentPic)" ] && newPic="$newDir/$(echo "$(basename $recentPic)" | sed 's/\(.*\)\..*/\1/')-c.$(echo "$recentPic" | sed 's/.*\.//')" ||
-				newPic="$newDir/$(basename $recentPic)"
-			basicrop "$recentPic" "$newPic" # could be replaced with a different editor
-			### change below
+			[ -f "$newDir/$(basename $recentPic)" ] && newPic="$newDir/$(echo "$(basename $recentPic)" | sed 's/\(.*\)\..*/\1/')-c.$(echo "$recentPic" | sed 's/.*\.//')" || newPic="$newDir/$(basename $recentPic)"
+
+			basicrop "$recentPic" "$newPic" || exit 1
 			! [ -f "$newPic" ] && newPic="$recentPic" && overwritten=true
 			[ $file ] || xclip -t "image/png" -sel c "$newPic"
 			! [ $overwritten ] && [ $temp ] && rm "$newPic"
-			exit
+			exit 0
 			;;
 	esac
 	i=$(($i + 1))
 done
 shotgun -f png $select "$out"
 [ $file ] || xclip -t "image/png" -sel c "$out"
+[ $temp ] && cd "/tmp/$USER/screenshot" && rm $( ls -t | tail -n $(($(ls | wc -l) - 10)) ) && cd
+# delete screenshots over 10 files old
