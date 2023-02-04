@@ -40,5 +40,10 @@ until [ $i -gt $# ]; do
 done
 shotgun -f png $select "$out"
 [ $file ] || xclip -t "image/png" -sel c "$out"
-[ $temp ] && cd "/tmp/$USER/screenshot" && rm $( ls -tr | head -n $(($(ls | wc -l) - 10)) ) && cd
+if [ $temp ]; then
+	cd "/tmp/$USER/screenshot"
+	i=$(($(ls | wc -l) - 10))
+	[ $i -gt 0 ] && ls -tr --quoting-style=shell-escape | head -n $(($(ls | wc -l) - 10)) | xargs rm
+	cd
+fi
 # delete screenshots over 10 files old
